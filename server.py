@@ -238,6 +238,7 @@ class PromptServer():
             if args.front_end_root is None
             else args.front_end_root
         )
+        self.local_web_root = os.path.join(os.path.dirname(os.path.realpath(__file__)), "web")
         logging.info(f"[Prompt Server] web root: {self.web_root}")
         register_assets_system(self.app, self.user_manager)
         routes = web.RouteTableDef()
@@ -340,6 +341,15 @@ class PromptServer():
                 glob.escape(self.web_root), 'extensions/**/*.js'), recursive=True)
 
             extensions = list(map(lambda f: "/" + os.path.relpath(f, self.web_root).replace("\\", "/"), files))
+
+            # Also include extensions from the local web/ directory
+            local_ext_root = os.path.join(self.local_web_root, "extensions")
+            if os.path.isdir(local_ext_root):
+                local_files = glob.glob(os.path.join(glob.escape(local_ext_root), '**/*.js'), recursive=True)
+                for f in local_files:
+                    rel = os.path.relpath(f, self.local_web_root).replace("\\", "/")
+                    if "/" + rel not in extensions:
+                        extensions.append("/" + rel)
 
             for name, dir in nodes.EXTENSION_WEB_DIRS.items():
                 files = glob.glob(os.path.join(glob.escape(dir), '**/*.js'), recursive=True)
@@ -934,6 +944,10 @@ class PromptServer():
 
             return web.Response(status=200)
 
+        @routes.post("/shutdown")
+        async def post_shutdown(request):
+            os._exit(0)
+
         @routes.post("/interrupt")
         async def post_interrupt(request):
             try:
@@ -1051,6 +1065,13 @@ class PromptServer():
         if embedded_docs_path:
             self.app.add_routes([
                 web.static('/docs', embedded_docs_path)
+            ])
+
+        # Serve local web/extensions/ at /extensions/ so local extensions are reachable
+        local_ext_root = os.path.join(self.local_web_root, "extensions")
+        if os.path.isdir(local_ext_root):
+            self.app.add_routes([
+                web.static('/extensions', local_ext_root),
             ])
 
         self.app.add_routes([
