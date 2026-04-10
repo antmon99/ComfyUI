@@ -944,9 +944,18 @@ class PromptServer():
 
             return web.Response(status=200)
 
+        @routes.get("/stopped")
+        async def get_stopped(request):
+            stopped_html = os.path.join(self.local_web_root, "extensions", "comfyui_exit", "stopped.html")
+            return web.FileResponse(stopped_html)
+
         @routes.post("/shutdown")
         async def post_shutdown(request):
-            os._exit(0)
+            async def _exit():
+                await asyncio.sleep(0.5)
+                os._exit(0)
+            asyncio.ensure_future(_exit())
+            return web.Response(status=200)
 
         @routes.post("/interrupt")
         async def post_interrupt(request):

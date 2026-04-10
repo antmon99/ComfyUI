@@ -10,7 +10,7 @@ app.registerExtension({
             icon: "pi pi-power-off",
             function: async () => {
                 if (confirm("Shut down ComfyUI?")) {
-                    await fetch("/shutdown", { method: "POST" }).catch(() => {});
+                    window.location.href = "/stopped";
                 }
             }
         }
